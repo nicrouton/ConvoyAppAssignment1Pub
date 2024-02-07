@@ -60,8 +60,8 @@ class MainActivity : AppCompatActivity() {
                         val jsonData = JSONObject(response)
                         Log.d("", response)
                         if(jsonData.getString("status") == "SUCCESS"){
-                            loginVerified = true
                             sessionKey = jsonData.getString("session_key")
+                            launchHomePage()
                         } else{
                             Log.d("API",jsonData.getString("message"))
                         }
@@ -80,10 +80,6 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 queue.add(stringRequest)
-            }
-
-            if(loginVerified){
-                launchHomePage()
             }
         }
     }
@@ -104,8 +100,8 @@ class MainActivity : AppCompatActivity() {
                         val jsonData = JSONObject(response)
                         Log.d("", response)
                         if(jsonData.getString("status") == "SUCCESS"){
-                            loginVerified = true
                             sessionKey = jsonData.getString("session_key")
+                            launchHomePage()
                         } else{
                             Log.d("API",jsonData.getString("message"))
                         }
@@ -126,10 +122,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 queue.add(stringRequest)
-            }
-
-            if (loginVerified) {
-                launchHomePage()
             }
         }
     }
