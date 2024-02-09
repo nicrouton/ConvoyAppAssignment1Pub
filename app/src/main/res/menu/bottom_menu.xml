@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/createConvoy"
+        android:icon="@drawable/add_24px"
+        android:title="Create"
+        app:showAsAction="always|withText" />
+    <item
+        android:id="@+id/joinConvoy"
+        android:icon="@drawable/join_24px"
+        android:title="Join"
+        app:showAsAction="always|withText" />
+    <item
+        android:id="@+id/leaveConvoy"
+        android:icon="@drawable/close_24px"
+        android:title="Leave"
+        app:showAsAction="always|withText" />
+</menu>
