@@ -20,74 +20,79 @@ import java.io.FileReader
 import java.io.IOException
 import java.net.URL
 
+val USER_NAME = "USERNAME"
+val sessionIDFileName = "SessionID"
+val usernameFileName = "Username"
+val convoyIDFileName = "ConvoyID"
+
 class MainActivity : AppCompatActivity() {
 
     var loginVerified = false
     val urlString = "https://kamorris.com/lab/convoy/account.php"
     lateinit var sessionKey: String
     private lateinit var file: File
-    public val fileName = "SessionID"
+    val fileName = "SessionID"
+    var user = ""
+
+    lateinit var usernameEditText: EditText
+    lateinit var passwordEditText: EditText
+    lateinit var firstnameEditText: EditText
+    lateinit var lastnameEditText: EditText
     //Hydro 12345
+    //NR 12345
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         file = File(filesDir, fileName)
-        var isFirstTime = loadSessionID(file)
+        var isFirstTime = Utils().loadPropertyFromFile(this, sessionIDFileName).first
+        val loadUser = Utils().loadPropertyFromFile(this, usernameFileName)
+        if(loadUser.first){
+            user = loadUser.second
+        }
         if(isFirstTime){
             launchHomePage()
         }
         loginSetup()
-
-
     }
 
-    fun createAccountSetup(){
+    private fun createAccountSetup(){
         setContentView(R.layout.create_account_screen)
         findViewById<Button>(R.id.loginButton).setOnClickListener {
             setContentView(R.layout.activity_main)
             loginSetup()
         }
-        val username = findViewById<EditText>(R.id.usernameEditText)
-        val password = findViewById<EditText>(R.id.passwordEditText)
-        val firstname = findViewById<EditText>(R.id.firstnameEditText)
-        val lastname = findViewById<EditText>(R.id.lastnameEditText)
+        usernameEditText = findViewById(R.id.usernameEditText)
+        passwordEditText= findViewById(R.id.passwordEditText)
+        firstnameEditText = findViewById(R.id.firstnameEditText)
+        lastnameEditText = findViewById(R.id.lastnameEditText)
 
         findViewById<Button>(R.id.createAccountButton).setOnClickListener {
-            if(username.text.isEmpty() || password.text.isEmpty() ||
-                firstname.text.isEmpty() || lastname.text.isEmpty()){
+            if(usernameEditText.text.isEmpty() || passwordEditText.text.isEmpty() ||
+                firstnameEditText.text.isEmpty() || lastnameEditText.text.isEmpty()){
                     Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_LONG).show()
             } else {
-                var queue = Volley.newRequestQueue(this@MainActivity)
-                var stringRequest = object : StringRequest(
-                    Method.POST,
-                    urlString,
-                    Response.Listener { response ->
-                        val jsonData = JSONObject(response)
-                        Log.d("", response)
-                        if(jsonData.getString("status") == "SUCCESS"){
-                            sessionKey = jsonData.getString("session_key")
-                            saveSessionID(sessionKey)
-                            launchHomePage()
-                        } else{
-                            Log.d("API",jsonData.getString("message"))
-                        }
-                    },
-                    Response.ErrorListener { error ->
-                        Toast.makeText(this, "There was an error making the login request", Toast.LENGTH_LONG).show()
-                    }) {
-                        override fun getParams(): Map<String, String> {
-                            val params = HashMap<String, String>()
-                            params.put("action", "REGISTER")
-                            params.put("username",username.text.toString())
-                            params.put("firstname",firstname.text.toString())
-                            params.put("lastname",lastname.text.toString())
-                            params.put("password", password.text.toString())
-                            return params
-                        }
+                user = usernameEditText.text.toString()
+                val params = HashMap<String, String>()
+                params.put("action", "REGISTER")
+                params.put("username",user)
+                params.put("firstname",firstnameEditText.text.toString())
+                params.put("lastname",lastnameEditText.text.toString())
+                params.put("password", passwordEditText.text.toString())
+                Utils().getDataFromAPI(urlString,this,params){
+                    val jsonData = JSONObject(it)
+                    Log.d("", it)
+                    if(jsonData.getString("status") == "SUCCESS"){
+                        sessionKey = jsonData.getString("session_key")
+                        Utils().savePropertyToFile(sessionKey, file)
+                        Utils().savePropertyToFile(user, File(filesDir, usernameFileName))
+                        launchHomePage()
+                    } else{
+                        Log.d("API",jsonData.getString("message"))
                     }
-                queue.add(stringRequest)
+                }
             }
+
         }
     }
 
@@ -95,84 +100,42 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.createAccountButton).setOnClickListener{
             createAccountSetup()
         }
-        val username = findViewById<EditText>(R.id.usernameEditText)
+        usernameEditText = findViewById(R.id.usernameEditText)
         val password = findViewById<EditText>(R.id.passwordEditText)
         findViewById<Button>(R.id.loginButton).setOnClickListener {
-            if (username.text.isEmpty() || password.text.isEmpty()) {
+            if (usernameEditText.text.isEmpty() || password.text.isEmpty()) {
                 Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_LONG).show()
             } else {
-                var queue = Volley.newRequestQueue(this@MainActivity)
-                var stringRequest = object : StringRequest(
-                    Method.POST,
-                    urlString,
-                    Response.Listener { response ->
-                        val jsonData = JSONObject(response)
-                        Log.d("", response)
-                        if(jsonData.getString("status") == "SUCCESS"){
-                            sessionKey = jsonData.getString("session_key")
-                            saveSessionID(sessionKey)
-                            launchHomePage()
-                        } else{
-                            Log.d("API",jsonData.getString("message"))
-                        }
-                    },
-                    Response.ErrorListener { error ->
-                        Toast.makeText(
-                            this,
-                            "There was an error making the login request",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }) {
-                    override fun getParams(): Map<String, String> {
-                        val params = HashMap<String, String>()
-                        params.put("action", "LOGIN")
-                        params.put("username", username.text.toString())
-                        params.put("password", password.text.toString())
-                        return params
+                user = usernameEditText.text.toString()
+                val params = HashMap<String, String>()
+                params.put("action", "LOGIN")
+                params.put("username",user)
+                params.put("password", password.text.toString())
+                Utils().getDataFromAPI(urlString,this,params){
+                    val jsonData = JSONObject(it)
+                    Log.d("", it)
+                    if(jsonData.getString("status") == "SUCCESS"){
+                        sessionKey = jsonData.getString("session_key")
+                        Utils().savePropertyToFile(sessionKey, file)
+                        Utils().savePropertyToFile(user, File(filesDir, usernameFileName))
+                        launchHomePage()
+                    } else{
+                        Log.d("API",jsonData.getString("message"))
                     }
                 }
-                queue.add(stringRequest)
             }
         }
     }
 
     fun launchHomePage(){
-        startActivity(Intent(this, HomePage::class.java))
+        startForegroundService(
+            Intent(this, LocationListenerService::class.java)
+        )
+
+        startActivity(
+            Intent(this, HomePage::class.java)
+                .putExtra(USER_NAME, user)
+        )
     }
 
-    private fun saveSessionID(sessionID: String){
-        try{
-            val outputStream = FileOutputStream(file)
-            outputStream.write(sessionID.toByteArray())
-            outputStream.close()
-            Log.d("Saving", "File saved completed")
-        } catch(e: Exception){
-            e.printStackTrace()
-        }
-    }
-
-    private fun loadSessionID(file: File): Boolean{
-        if(file.exists()){
-            try {
-                val br = BufferedReader(FileReader(file))
-                val text = StringBuilder()
-                var line: String?
-                while (br.readLine().also { line = it } != null) {
-                    text.append(line)
-                    text.append('\n')
-                }
-                br.close()
-                Log.d("Loaded Session ID",text.toString())
-                sessionKey = text.toString()
-                if(sessionKey.isEmpty()){
-                    return false
-                }
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-            return true
-        } else {
-            return false
-        }
-    }
 }
