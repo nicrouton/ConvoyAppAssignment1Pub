@@ -1,24 +1,22 @@
 package edu.temple.convoy
 
-import android.app.VoiceInteractor.Request
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
-import com.android.volley.RequestQueue
-import com.android.volley.Response
-import com.android.volley.toolbox.StringRequest
-import com.android.volley.toolbox.Volley
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import org.json.JSONObject
-import java.io.BufferedReader
 import java.io.File
-import java.io.FileOutputStream
-import java.io.FileReader
-import java.io.IOException
-import java.net.URL
 
 val USER_NAME = "USERNAME"
 val sessionIDFileName = "SessionID"
@@ -47,6 +45,17 @@ class MainActivity : AppCompatActivity() {
         file = File(filesDir, fileName)
         var isFirstTime = Utils().loadPropertyFromFile(this, sessionIDFileName).first
         val loadUser = Utils().loadPropertyFromFile(this, usernameFileName)
+
+        requestUserPermission()
+
+        val channel = NotificationChannel(
+            "Convoy",
+            "Convoy Notifications",
+            NotificationManager.IMPORTANCE_HIGH
+        )
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
+
         if(loadUser.first){
             user = loadUser.second
         }
@@ -54,6 +63,19 @@ class MainActivity : AppCompatActivity() {
             launchHomePage()
         }
         loginSetup()
+    }
+
+    private fun requestUserPermission() {
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.POST_NOTIFICATIONS,
+                Manifest.permission.FOREGROUND_SERVICE_LOCATION
+                ),
+            0
+        )
     }
 
     private fun createAccountSetup(){
@@ -128,10 +150,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun launchHomePage(){
-        startForegroundService(
-            Intent(this, LocationListenerService::class.java)
-        )
-
         startActivity(
             Intent(this, HomePage::class.java)
                 .putExtra(USER_NAME, user)
