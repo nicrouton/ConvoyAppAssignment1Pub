@@ -36,11 +36,9 @@ class LocationClient(
 
             val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, interval).apply {
                 setMinUpdateIntervalMillis(interval)
+                setMinUpdateDistanceMeters(10f)
             }.build()
 
-//            val request = LocationRequest.create()
-//                .setInterval(interval)
-//                .setFastestInterval(interval)
 
             val locationCallback = object : LocationCallback() {
                 override fun onLocationResult(result: LocationResult) {

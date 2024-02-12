@@ -1,5 +1,6 @@
 package edu.temple.convoy
 
+import android.app.ActivityManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -20,6 +21,7 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import org.json.JSONObject
 import java.io.File
+
 
 val LOCATION_UPDATE = "LOCATION_UPDATE"
 
@@ -53,13 +55,9 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
         username = intent.getStringExtra(USER_NAME)!!
         convoyID = Utils().loadPropertyFromFile(this, convoyIDFileName).second
         val topbar = findViewById<androidx.appcompat.widget.Toolbar>(R.id.topBar)
-//        LocalBroadcastManager.getInstance(this).registerReceiver(
-//            locationUpdateReceiver,
-//            IntentFilter(LOCATION_UPDATE)
-//        )
         setSupportActionBar(topbar)
         topbar.showOverflowMenu()
-        supportActionBar?.title = "Not in a convoy"
+        setIfInConoy()
 
         topbar.setOnMenuItemClickListener{
             when(it.itemId){
@@ -95,6 +93,26 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
 
     }
 
+    private fun setIfInConoy(){
+        val params = HashMap<String,String>()
+        params["action"] = "QUERY"
+        params["username"] = username
+        params["session_key"] = Utils().loadPropertyFromFile(this@HomePage, "SessionID").second
+        Utils().getDataFromAPI(
+            convoyURL,
+            this@HomePage,
+            params
+        ){
+            val jsonData = JSONObject(it)
+
+            if(jsonData.getString("status") == "SUCCESS"){
+                supportActionBar?.title = jsonData.getString("convoy_id")
+            } else{
+                supportActionBar?.title = "Not in a convoy"
+            }
+        }
+    }
+
     private fun leaveConvoy() {
         val params = HashMap<String, String>()
         params["action"] = "END"
@@ -108,10 +126,12 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
 
             if(jsonData.getString("status") == "SUCCESS"){
                 supportActionBar?.title = "Not in a convoy"
-                Intent(this, LocationListenerService::class.java).also {
-                    it.action = LocationListenerService.Actions.STOP.toString()
-                    //can crash if service is not running
-                    startForegroundService(it)
+                if(isMyServiceRunning(LocationListenerService::class.java)){
+                    Intent(this, LocationListenerService::class.java).also {
+                        it.action = LocationListenerService.Actions.STOP.toString()
+                        //can crash if service is not running
+                        startForegroundService(it)
+                    }
                 }
                 LocalBroadcastManager.getInstance(this).unregisterReceiver(locationUpdateReceiver)
             } else{
@@ -121,7 +141,7 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun joinConvoy() {
-        CustomDialogFragment("Please Enter a ConvoyID", username)
+        CustomDialogFragment("Please Enter a ConvoyID", username, true)
             .show(supportFragmentManager, CustomDialogFragment.TAG)
     }
 
@@ -150,7 +170,17 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
 
             } else{
                 Log.d("API",jsonData.getString("message"))
-                Log.d("SessionKey", session)
+                if(jsonData.getString("message") == "A Convoy session is already active for that user. Close active session to start another."){
+                    CustomDialogFragment(
+                        "You already have a convoy running",
+                        "",
+                        false
+                    ).show(
+                        supportFragmentManager,
+                        CustomDialogFragment.TAG
+                    )
+                }
+
             }
         }
     }
@@ -158,6 +188,7 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
     private fun logout() {
         File(filesDir, usernameFileName).delete()
         File(filesDir, sessionIDFileName).delete()
+        File(filesDir, convoyIDFileName).delete()
         unregisterReceiver(locationUpdateReceiver)
         startActivity(Intent(this, MainActivity::class.java))
 
@@ -191,5 +222,17 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
         super.onDestroy()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(locationUpdateReceiver)
         leaveConvoy()
+        Utils().savePropertyToFile("",  File(filesDir, convoyIDFileName))
+    }
+
+    @Suppress("DEPRECATION")
+    private fun isMyServiceRunning(serviceClass: Class<*>): Boolean {
+        val manager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
+        for (service in manager.getRunningServices(Int.MAX_VALUE)) {
+            if (serviceClass.name == service.service.className) {
+                return true
+            }
+        }
+        return false
     }
 }
