@@ -6,7 +6,6 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -14,7 +13,6 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import org.json.JSONObject
 import java.io.File
 
@@ -25,33 +23,36 @@ val convoyIDFileName = "ConvoyID"
 
 class MainActivity : AppCompatActivity() {
 
-    var loginVerified = false
     val urlString = "https://kamorris.com/lab/convoy/account.php"
     lateinit var sessionKey: String
     private lateinit var file: File
-    val fileName = "SessionID"
     var user = ""
 
     lateinit var usernameEditText: EditText
     lateinit var passwordEditText: EditText
     lateinit var firstnameEditText: EditText
     lateinit var lastnameEditText: EditText
+    //Usernames and passwords
     //Hydro 12345
     //NR 12345
+    //HydroLink 12345
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        file = File(filesDir, fileName)
+        //Load the session ID from the file
+        file = File(filesDir, sessionIDFileName)
+        //If we can retrieve the session ID this is true. Use the fact that there is a sessionID to say the user is logged in
         var isFirstTime = Utils().loadPropertyFromFile(this, sessionIDFileName).first
         val loadUser = Utils().loadPropertyFromFile(this, usernameFileName)
 
         requestUserPermission()
 
+        //Setup the notification channel for the Location Service
         val channel = NotificationChannel(
             "Convoy",
             "Convoy Notifications",
-            NotificationManager.IMPORTANCE_HIGH
+            NotificationManager.IMPORTANCE_LOW
         )
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
@@ -150,10 +151,36 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun launchHomePage(){
-        startActivity(
-            Intent(this, HomePage::class.java)
-                .putExtra(USER_NAME, user)
-        )
+        if(ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED){
+                startActivity(
+                    Intent(this, HomePage::class.java)
+                        .putExtra(USER_NAME, user)
+                )
+        } else if(shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) ||
+            shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_COARSE_LOCATION) ||
+            shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)){
+                PermissionAlertDialogFragment(
+                    "This app does not work without the requested permissions, Would you like to enable them?",
+                    "Yes",
+                    "No",
+                    { _,_ ->
+                        requestUserPermission()
+                    },
+                    { _,_ ->
+                        finishAndRemoveTask()
+                    }
+                ).show(supportFragmentManager, PermissionAlertDialogFragment.TAG)
+        } else{
+            requestUserPermission()
+        }
+
     }
 
 }

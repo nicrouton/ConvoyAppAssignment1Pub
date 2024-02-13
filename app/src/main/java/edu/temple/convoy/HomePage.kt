@@ -30,6 +30,7 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
     val convoyURL = "https://kamorris.com/lab/convoy/convoy.php"
     lateinit var username: String
     var convoyID = ""
+    var receiverRegistered = false
 
     private lateinit var mapView: MapView
     private var marker: Marker? = null
@@ -118,7 +119,6 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
         params["action"] = "END"
         params["username"] = username
         params["session_key"] = Utils().loadPropertyFromFile(this@HomePage, "SessionID").second
-        // Might need to check if this is null and show error
         params["convoy_id"] = convoyID
         Log.d("ConvoyID",convoyID)
         Utils().getDataFromAPI(convoyURL, this@HomePage, params){
@@ -129,11 +129,11 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
                 if(isMyServiceRunning(LocationListenerService::class.java)){
                     Intent(this, LocationListenerService::class.java).also {
                         it.action = LocationListenerService.Actions.STOP.toString()
-                        //can crash if service is not running
                         startForegroundService(it)
                     }
                 }
                 LocalBroadcastManager.getInstance(this).unregisterReceiver(locationUpdateReceiver)
+                receiverRegistered = false
             } else{
                 Log.d("API",jsonData.getString("message"))
             }
@@ -167,6 +167,7 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
                         locationUpdateReceiver,
                         IntentFilter(LOCATION_UPDATE)
                     )
+                receiverRegistered = true
 
             } else{
                 Log.d("API",jsonData.getString("message"))
@@ -179,6 +180,7 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
                         supportFragmentManager,
                         CustomDialogFragment.TAG
                     )
+
                 }
 
             }
@@ -189,7 +191,9 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
         File(filesDir, usernameFileName).delete()
         File(filesDir, sessionIDFileName).delete()
         File(filesDir, convoyIDFileName).delete()
-        unregisterReceiver(locationUpdateReceiver)
+        if(receiverRegistered){
+            unregisterReceiver(locationUpdateReceiver)
+        }
         startActivity(Intent(this, MainActivity::class.java))
 
     }
@@ -203,7 +207,7 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
         return super.onCreateOptionsMenu(menu)
     }
 
-    public fun updatePos(lat: Double, long: Double){
+    private fun updatePos(lat: Double, long: Double){
         var latlng = LatLng(lat,long)
 
         val cameraUpdate = CameraUpdateFactory.newLatLngZoom(latlng, 15f)

@@ -20,7 +20,7 @@ class LocationClient(
     private val context: Context,
     private val client: FusedLocationProviderClient
 ) {
-
+    // Need this because android doesn't know we already checked
     @SuppressLint("MissingPermission")
     fun getLocationUpdates(interval: Long): Flow<Location> {
         return callbackFlow {
@@ -59,14 +59,6 @@ class LocationClient(
                 client.removeLocationUpdates(locationCallback)
             }
         }
-    }
-
-    class LocationException(val mes: String): Exception(){
-        override fun printStackTrace() {
-            super.printStackTrace()
-            Log.d("LocationException", mes)
-        }
-
     }
 
 }

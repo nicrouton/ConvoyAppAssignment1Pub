@@ -51,6 +51,8 @@ class LocationListenerService : Service(){
             .setContentTitle("Tracking Location")
             .setContentText("Test Description")
             .setOngoing(true)
+            .setDefaults(0)
+            .setSound(null)
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
