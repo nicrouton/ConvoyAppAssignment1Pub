@@ -36,6 +36,8 @@ class MainActivity : AppCompatActivity() {
     //Hydro 12345
     //NR 12345
     //HydroLink 12345
+    //API key is in local.properties
+    //MAPS_API_KEY=
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

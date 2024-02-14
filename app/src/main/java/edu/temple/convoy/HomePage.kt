@@ -117,8 +117,8 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
     private fun leaveConvoy() {
         PermissionAlertDialogFragment(
             "Are you sure you want to leave?",
-            "",
-            "",
+            "Yes",
+            "No",
             { _,_ ->
                 val params = HashMap<String, String>()
                 params["action"] = "END"
