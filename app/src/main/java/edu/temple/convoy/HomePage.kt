@@ -115,29 +115,39 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun leaveConvoy() {
-        val params = HashMap<String, String>()
-        params["action"] = "END"
-        params["username"] = username
-        params["session_key"] = Utils().loadPropertyFromFile(this@HomePage, "SessionID").second
-        params["convoy_id"] = convoyID
-        Log.d("ConvoyID",convoyID)
-        Utils().getDataFromAPI(convoyURL, this@HomePage, params){
-            val jsonData = JSONObject(it)
+        PermissionAlertDialogFragment(
+            "Are you sure you want to leave?",
+            "",
+            "",
+            { _,_ ->
+                val params = HashMap<String, String>()
+                params["action"] = "END"
+                params["username"] = username
+                params["session_key"] = Utils().loadPropertyFromFile(this@HomePage, "SessionID").second
+                params["convoy_id"] = convoyID
+                Log.d("ConvoyID",convoyID)
+                Utils().getDataFromAPI(convoyURL, this@HomePage, params){
+                    val jsonData = JSONObject(it)
 
-            if(jsonData.getString("status") == "SUCCESS"){
-                supportActionBar?.title = "Not in a convoy"
-                if(isMyServiceRunning(LocationListenerService::class.java)){
-                    Intent(this, LocationListenerService::class.java).also {
-                        it.action = LocationListenerService.Actions.STOP.toString()
-                        startForegroundService(it)
+                    if(jsonData.getString("status") == "SUCCESS"){
+                        supportActionBar?.title = "Not in a convoy"
+                        if(isMyServiceRunning(LocationListenerService::class.java)){
+                            Intent(this, LocationListenerService::class.java).also {
+                                it.action = LocationListenerService.Actions.STOP.toString()
+                                startForegroundService(it)
+                            }
+                        }
+                        LocalBroadcastManager.getInstance(this).unregisterReceiver(locationUpdateReceiver)
+                        receiverRegistered = false
+                    } else{
+                        Log.d("API",jsonData.getString("message"))
                     }
                 }
-                LocalBroadcastManager.getInstance(this).unregisterReceiver(locationUpdateReceiver)
-                receiverRegistered = false
-            } else{
-                Log.d("API",jsonData.getString("message"))
+            },
+            { _,_ ->
+
             }
-        }
+        ).show(supportFragmentManager,PermissionAlertDialogFragment.TAG)
     }
 
     private fun joinConvoy() {
