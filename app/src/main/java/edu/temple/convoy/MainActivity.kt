@@ -96,25 +96,41 @@ class MainActivity : AppCompatActivity() {
             if(usernameEditText.text.isEmpty() || passwordEditText.text.isEmpty() ||
                 firstnameEditText.text.isEmpty() || lastnameEditText.text.isEmpty()){
                     Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_LONG).show()
+
+                    Log.d("create account button listener ERROR", "one field was empty.")
             } else {
-                user = usernameEditText.text.toString()
-                val params = HashMap<String, String>()
-                params.put("action", "REGISTER")
-                params.put("username",user)
-                params.put("firstname",firstnameEditText.text.toString())
-                params.put("lastname",lastnameEditText.text.toString())
-                params.put("password", passwordEditText.text.toString())
-                Utils().getDataFromAPI(urlString,this,params){
-                    val jsonData = JSONObject(it)
-                    Log.d("", it)
-                    if(jsonData.getString("status") == "SUCCESS"){
-                        sessionKey = jsonData.getString("session_key")
-                        Utils().savePropertyToFile(sessionKey, file)
-                        Utils().savePropertyToFile(user, File(filesDir, usernameFileName))
-                        launchHomePage()
-                    } else{
-                        Log.d("API",jsonData.getString("message"))
+
+                try {
+                    user = usernameEditText.text.toString()
+                    val params = HashMap<String, String>()
+                    params.put("action", "REGISTER")
+                    params.put("username", user)
+                    params.put("firstname", firstnameEditText.text.toString())
+                    params.put("lastname", lastnameEditText.text.toString())
+                    params.put("password", passwordEditText.text.toString())
+
+                    Log.d("create account button listener", "starting post request")
+
+                    Utils().getDataFromAPI(urlString, this@MainActivity, params) {
+                        val jsonData = JSONObject(it)
+                        Log.d("", it)
+                        if (jsonData.getString("status") == "SUCCESS") {
+                            sessionKey = jsonData.getString("session_key")
+                            Utils().savePropertyToFile(sessionKey, file)
+                            Utils().savePropertyToFile(user, File(filesDir, usernameFileName))
+
+                            Log.d(
+                                "POST request Create Account button",
+                                "POST request made, Launching convoy..."
+                            )
+
+                            launchHomePage()
+                        } else {
+                            Log.d("API", jsonData.getString("message"))
+                        }
                     }
+                } catch (e: Exception) {
+                    Log.d("POST catch exception account creation", "POST catch exception account creation")
                 }
             }
 
