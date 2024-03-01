@@ -19,10 +19,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ConvoyApp"
         tools:targetApi="31">
-        <service
-            android:name=".FirebaseService"
-            android:enabled="true"
-            android:exported="true"></service>
 
         <service
             android:name="FirebaseService"
@@ -44,13 +40,7 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location"></service>
-        <service
-            android:name=".FirebaseToken"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.google.firebase.INSTANCE_ID_EVENT" />
-            </intent-filter>
-        </service>
+
 
         <activity
             android:name=".HomePage"
