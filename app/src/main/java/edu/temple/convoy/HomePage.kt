@@ -24,6 +24,7 @@ import java.io.File
 
 
 val LOCATION_UPDATE = "LOCATION_UPDATE"
+val FCM_SERVICE_UPDATE = "FCM_SERVICE_UPDATE"
 
 class HomePage : AppCompatActivity(), OnMapReadyCallback {
 
@@ -50,6 +51,16 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    // when a new fcm token is received/refreshed sent a UPDATE request to server
+    private val tokenRefreshReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action == "TOKEN_REFRESHED") {
+                val token = intent.getStringExtra("TOKEN")
+                // Handle token refresh in your activity
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.home_page)
@@ -59,6 +70,11 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
         setSupportActionBar(topbar)
         topbar.showOverflowMenu()
         setIfInConoy()
+
+        // Register the broadcast receiver
+        val filter = IntentFilter()
+        filter.addAction("TOKEN_REFRESHED")
+        LocalBroadcastManager.getInstance(this).registerReceiver(tokenRefreshReceiver, filter)
 
         topbar.setOnMenuItemClickListener{
             when(it.itemId){
@@ -179,6 +195,9 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
                     )
                 receiverRegistered = true
 
+
+
+
             } else{
                 Log.d("API",jsonData.getString("message"))
                 if(jsonData.getString("message") == "A Convoy session is already active for that user. Close active session to start another."){
@@ -235,6 +254,8 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
     override fun onDestroy() {
         super.onDestroy()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(locationUpdateReceiver)
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(tokenRefreshReceiver)
+
         leaveConvoy()
         Utils().savePropertyToFile("",  File(filesDir, convoyIDFileName))
     }
