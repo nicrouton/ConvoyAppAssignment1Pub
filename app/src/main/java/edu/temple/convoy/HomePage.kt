@@ -32,6 +32,7 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
     lateinit var username: String
     var convoyID = ""
     var receiverRegistered = false
+    val urlString = "https://kamorris.com/lab/convoy/account.php"
 
     private lateinit var mapView: MapView
     private var marker: Marker? = null
@@ -57,6 +58,29 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
             if (intent.action == "TOKEN_REFRESHED") {
                 val token = intent.getStringExtra("TOKEN")
                 // Handle token refresh in your activity
+                val params = HashMap<String, String>()
+                params["action"] = "UPDATE"
+                params["username"] = username
+                params["session_key"] = Utils().loadPropertyFromFile(this@HomePage, "SessionID").second
+                params["fcm_token"] = token.toString()
+                Utils().getDataFromAPI(urlString,this@HomePage, params) {
+                    val jsonData = JSONObject(it)
+                    Log.d("", it)
+                    if (jsonData.getString("status") == "SUCCESS") {
+
+
+
+                        Log.d(
+                            "POST request update fcm",
+                            "Updating server with fcm token"
+                        )
+
+
+                    } else {
+                        Log.d("API", jsonData.getString("message"))
+                    }
+
+                }
             }
         }
     }
