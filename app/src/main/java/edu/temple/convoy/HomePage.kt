@@ -19,8 +19,11 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.tasks.OnCompleteListener
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.FirebaseApp
+import com.google.firebase.messaging.FirebaseMessaging
+import edu.temple.convoy.CustomDialogFragment.Companion.TAG
 import org.json.JSONObject
 import java.io.File
 
@@ -35,6 +38,8 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
     var convoyID = ""
     var receiverRegistered = false
     val urlString = "https://kamorris.com/lab/convoy/account.php"
+    // boolean to keep track of whether the user has joined a convoy already
+    var joinedConvoy = false
 
     private lateinit var mapView: MapView
     private var marker: Marker? = null
@@ -80,6 +85,8 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
 
                     } else {
                         Log.d("API", jsonData.getString("message"))
+                        Toast.makeText(this@HomePage, jsonData.getString("message"), Toast.LENGTH_LONG).show()
+
                     }
 
                 }
@@ -155,13 +162,24 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun leaveConvoy() {
+        var leavePrompt = ""
+        if (joinedConvoy) {
+            leavePrompt = "Are you sure you want to leave?"
+        } else {
+            leavePrompt = "This will end the convoy. Are you sure?"
+        }
         PermissionAlertDialogFragment(
-            "Are you sure you want to leave?",
+            leavePrompt,
             "Yes",
             "No",
             { _,_ ->
                 val params = HashMap<String, String>()
-                params["action"] = "END"
+                if (joinedConvoy) {
+                    params["action"] = "LEAVE"
+                } else {
+                    params["action"] = "END"
+                }
+
                 params["username"] = username
                 params["session_key"] = Utils().loadPropertyFromFile(this@HomePage, "SessionID").second
                 params["convoy_id"] = convoyID
@@ -183,6 +201,8 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
                         receiverRegistered = false
                     } else{
                         Log.d("API",jsonData.getString("message"))
+                        Toast.makeText(this, "Leave failed: $jsonData", Toast.LENGTH_LONG).show()
+
                     }
                 }
             },
@@ -210,6 +230,56 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
                 convoyID = jsonData.getString("convoy_id")
                 Utils().savePropertyToFile(convoyID, File(filesDir, convoyIDFileName))
                 supportActionBar?.title = "Joined: $convoyID"
+
+                joinedConvoy = true
+
+
+                Intent(this, LocationListenerService::class.java).also {
+                    it.action = LocationListenerService.Actions.START.toString()
+                    startForegroundService(it)
+                }
+                LocalBroadcastManager.getInstance(this)
+                    .registerReceiver(
+                        locationUpdateReceiver,
+                        IntentFilter(LOCATION_UPDATE)
+                    )
+                receiverRegistered = true
+
+
+                // Register the broadcast receiver
+                val filter = IntentFilter()
+                filter.addAction("TOKEN_REFRESHED")
+                LocalBroadcastManager.getInstance(this).registerReceiver(tokenRefreshReceiver, filter)
+                Log.d("FCM Broadcast Receiver", "FCM broadcast receiver registered in createconvoy()")
+
+
+                var fcmToken = ""
+
+                FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
+                    if (!task.isSuccessful) {
+                        Log.w(TAG, "Fetching FCM registration token failed", task.exception)
+                        return@OnCompleteListener
+                    }
+
+                    // Get new FCM registration token
+                    val fcmToken = task.result
+
+                    // Log and toast
+
+                    //Log.d(TAG, msg)
+                    Toast.makeText(baseContext, fcmToken, Toast.LENGTH_SHORT).show()
+                })
+
+
+                val params1 = HashMap<String, String>()
+                params1["action"] = "UPDATE"
+                params1["username"] = username
+                params1["session_key"] = Utils().loadPropertyFromFile(this@HomePage, "SessionID").second
+                params1["fcm_token"] = fcmToken
+                Utils().getDataFromAPI(urlString,this@HomePage, params) {
+                    val jsonData = JSONObject(it)
+                    Log.d("", it)
+                }
             } else {
                 Toast.makeText(this, "Join failed.", Toast.LENGTH_LONG).show()
                 Log.d("JOIN fail", jsonData.toString())
@@ -247,6 +317,34 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
                 filter.addAction("TOKEN_REFRESHED")
                 LocalBroadcastManager.getInstance(this).registerReceiver(tokenRefreshReceiver, filter)
                 Log.d("FCM Broadcast Receiver", "FCM broadcast receiver registered in createconvoy()")
+
+                var fcmToken = ""
+
+                FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
+                    if (!task.isSuccessful) {
+                        Log.w(TAG, "Fetching FCM registration token failed", task.exception)
+                        return@OnCompleteListener
+                    }
+
+                    // Get new FCM registration token
+                    val fcmToken = task.result
+
+                    // Log and toast
+
+                    //Log.d(TAG, msg)
+                    Toast.makeText(baseContext, fcmToken, Toast.LENGTH_SHORT).show()
+                })
+
+
+                val params1 = HashMap<String, String>()
+                params1["action"] = "UPDATE"
+                params1["username"] = username
+                params1["session_key"] = Utils().loadPropertyFromFile(this@HomePage, "SessionID").second
+                params1["fcm_token"] = fcmToken
+                Utils().getDataFromAPI(urlString,this@HomePage, params) {
+                    val jsonData = JSONObject(it)
+                    Log.d("", it)
+                }
 
 
 
