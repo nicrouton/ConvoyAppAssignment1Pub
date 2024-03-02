@@ -8,6 +8,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import edu.temple.convoy.CustomDialogFragment.Companion.TAG
+import org.json.JSONObject
 
 class FirebaseService :  FirebaseMessagingService() {
 
@@ -19,6 +20,23 @@ class FirebaseService :  FirebaseMessagingService() {
         // Check if message contains a data payload.
         if (remoteMessage.data.isNotEmpty()) {
             Log.d(TAG, "Message data payload: ${remoteMessage.data}")
+
+            val payload = remoteMessage.data["payload"]
+
+
+
+            // Check if message contains a data payload.
+
+
+            val jsonData = JSONObject(payload)
+
+            // Broadcast the JSON object
+            val intent = Intent("YOUR_ACTION_NAME")
+            intent.putExtra("JSON_DATA", jsonData.toString())
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+
+
+
 
             if (/* Check if data needs to be processed by long running job */ true) {
                 // For long-running tasks (10 seconds or more) use WorkManager.

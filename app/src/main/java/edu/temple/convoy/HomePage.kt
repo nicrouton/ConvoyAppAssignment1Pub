@@ -94,6 +94,23 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    private val broadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == "FIREBASE_PAYLOAD") {
+                val jsonString = intent.getStringExtra("JSON_DATA")
+                val jsonObject = JSONObject(jsonString)
+                // Handle the received JSON object here
+
+
+
+
+
+
+                Log.d("HomePage", "Received JSON: $jsonObject")
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.home_page)
@@ -104,7 +121,10 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
         topbar.showOverflowMenu()
         setIfInConoy()
 
-
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+            broadcastReceiver,
+            IntentFilter("FIREBASE_PAYLOAD")
+        )
 
 
         topbar.setOnMenuItemClickListener{
@@ -341,7 +361,7 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
                 params1["username"] = username
                 params1["session_key"] = Utils().loadPropertyFromFile(this@HomePage, "SessionID").second
                 params1["fcm_token"] = fcmToken
-                Utils().getDataFromAPI(urlString,this@HomePage, params) {
+                Utils().getDataFromAPI(urlString,this@HomePage, params1) {
                     val jsonData = JSONObject(it)
                     Log.d("", it)
                 }
@@ -388,6 +408,20 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
         return super.onCreateOptionsMenu(menu)
     }
 
+    private fun addMembers(lat: Double, long: Double) {
+        var latlng = LatLng(lat,long)
+
+        if(map != null){
+
+            if(marker == null){
+                marker = map.addMarker(MarkerOptions().position(latlng))!!
+            } else{
+                marker!!.position = latlng
+            }
+        }
+
+    }
+
     private fun updatePos(lat: Double, long: Double){
         var latlng = LatLng(lat,long)
 
@@ -401,15 +435,32 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
                 marker!!.position = latlng
             }
         }
+
+        if (joinedConvoy || receiverRegistered) {
+            val params1 = HashMap<String, String>()
+            params1["action"] = "UPDATE"
+            params1["username"] = username
+            params1["session_key"] = Utils().loadPropertyFromFile(this@HomePage, "SessionID").second
+            params1["convoy_id"] = convoyID
+            params1["latitude"] = lat.toString()
+            params1["longitude"] = long.toString()
+            Utils().getDataFromAPI(urlString,this@HomePage, params1) {
+                val jsonData = JSONObject(it)
+                Log.d("", it)
+            }
+
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(locationUpdateReceiver)
         LocalBroadcastManager.getInstance(this).unregisterReceiver(tokenRefreshReceiver)
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver)
 
         leaveConvoy()
         Utils().savePropertyToFile("",  File(filesDir, convoyIDFileName))
+
     }
 
     @Suppress("DEPRECATION")
