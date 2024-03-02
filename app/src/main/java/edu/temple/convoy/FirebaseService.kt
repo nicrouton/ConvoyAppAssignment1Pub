@@ -36,9 +36,7 @@ class FirebaseService :  FirebaseMessagingService() {
         intent.putExtra("TOKEN", token)
         LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
 
+        Log.d("new token", "FCM service received new token")
 
-
-        // add the UPDATE request required field to a hash and pash it to getDataFromAPI
-         //Utils().getDataFromAPI()
     }
 }

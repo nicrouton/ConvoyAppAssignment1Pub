@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -19,6 +20,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.firebase.FirebaseApp
 import org.json.JSONObject
 import java.io.File
 
@@ -95,10 +97,8 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
         topbar.showOverflowMenu()
         setIfInConoy()
 
-        // Register the broadcast receiver
-        val filter = IntentFilter()
-        filter.addAction("TOKEN_REFRESHED")
-        LocalBroadcastManager.getInstance(this).registerReceiver(tokenRefreshReceiver, filter)
+
+
 
         topbar.setOnMenuItemClickListener{
             when(it.itemId){
@@ -178,6 +178,8 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
                             }
                         }
                         LocalBroadcastManager.getInstance(this).unregisterReceiver(locationUpdateReceiver)
+                        LocalBroadcastManager.getInstance(this).unregisterReceiver(tokenRefreshReceiver)
+
                         receiverRegistered = false
                     } else{
                         Log.d("API",jsonData.getString("message"))
@@ -193,6 +195,26 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
     private fun joinConvoy() {
         CustomDialogFragment("Please Enter a ConvoyID", username, true)
             .show(supportFragmentManager, CustomDialogFragment.TAG)
+
+        // join request to the server: action, username, session_key, convoy_id
+        val session = Utils().loadPropertyFromFile(this@HomePage, "SessionID").second
+        val params = HashMap<String, String>()
+        params["action"] = "JOIN"
+        params["username"] = username
+        params["session_key"] = session
+        params["convoy_id"] = Utils().loadPropertyFromFile(this@HomePage, convoyIDFileName).second
+
+        Utils().getDataFromAPI(convoyURL, this@HomePage, params) {
+            val jsonData = JSONObject(it)
+            if(jsonData.getString("status") == "SUCCESS") {
+                convoyID = jsonData.getString("convoy_id")
+                Utils().savePropertyToFile(convoyID, File(filesDir, convoyIDFileName))
+                supportActionBar?.title = "Joined: $convoyID"
+            } else {
+                Toast.makeText(this, "Join failed.", Toast.LENGTH_LONG).show()
+                Log.d("JOIN fail", jsonData.toString())
+            }
+        }
     }
 
     private fun createConvoy() {
@@ -219,6 +241,12 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
                     )
                 receiverRegistered = true
 
+
+                // Register the broadcast receiver
+                val filter = IntentFilter()
+                filter.addAction("TOKEN_REFRESHED")
+                LocalBroadcastManager.getInstance(this).registerReceiver(tokenRefreshReceiver, filter)
+                Log.d("FCM Broadcast Receiver", "FCM broadcast receiver registered in createconvoy()")
 
 
 
@@ -247,6 +275,8 @@ class HomePage : AppCompatActivity(), OnMapReadyCallback {
         if(receiverRegistered){
             unregisterReceiver(locationUpdateReceiver)
         }
+
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(tokenRefreshReceiver)
         startActivity(Intent(this, MainActivity::class.java))
 
     }
